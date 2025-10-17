@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard v8: Capital Interativo</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+
+        :root {
+            --bg-color: #f4f7fa; --card-bg: #ffffff; --text-color: #333;
+            --primary-color: #0056b3; --secondary-color: #495057; --success-color: #20c997;
+            --danger-color: #e63946; --warning-color: #ffb703; --info-color: #17a2b8;
+            --shadow: 0 6px 12px rgba(0,0,0,0.08); --border-radius: 10px;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif; background-color: var(--bg-color);
+            color: var(--text-color); margin: 0; padding: 25px;
+        }
+
+        .container { max-width: 1200px; margin: auto; display: grid; gap: 25px; }
+        .header { text-align: center; margin-bottom: 10px; }
+        .header h1 { color: var(--primary-color); margin-bottom: 5px; }
+        .header p { color: var(--secondary-color); font-size: 1.1em; }
+        
+        h2 {
+            margin-top: 0; font-size: 1.5em; color: var(--primary-color);
+            border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px;
+        }
+        
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
+        .kpi-card {
+            background-color: var(--card-bg); padding: 25px; border-radius: var(--border-radius);
+            box-shadow: var(--shadow); text-align: center; border-top: 4px solid var(--primary-color);
+        }
+        .kpi-card.profit { border-top-color: var(--success-color); }
+        .kpi-card.loss { border-top-color: var(--danger-color); }
+        .kpi-card.info { border-top-color: var(--info-color); }
+
+        .kpi-card .label { font-size: 0.9em; color: var(--secondary-color); margin-bottom: 10px; }
+        .kpi-card .value { font-size: 2em; font-weight: 700; }
+        .kpi-card .value.positive { color: var(--success-color); }
+        .kpi-card .value.negative { color: var(--danger-color); }
+        .kpi-card .value.neutral { color: var(--primary-color); }
+        
+        .section {
+            background-color: var(--card-bg); padding: 30px; border-radius: var(--border-radius); box-shadow: var(--shadow);
+        }
+        
+        .portfolio-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+        .portfolio-card { background-color: #f8f9fa; border: 1px solid #e9ecef; padding: 20px; border-radius: var(--border-radius); }
+        .portfolio-card h3 { margin-top: 0; margin-bottom: 15px; color: var(--secondary-color); }
+        .portfolio-card ul { list-style: none; padding: 0; margin: 0; }
+        .portfolio-card ul li { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e9ecef;}
+        .portfolio-card ul li:last-child { border-bottom: none; }
+        .portfolio-card ul li span:last-child { font-weight: 700; }
+        .total-card { background-color: var(--primary-color); color: white; }
+        .total-card h3, .total-card ul li { color: white; }
+
+        .controls-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px 30px; }
+        .control-group { margin-bottom: 10px; }
+        .control-group label { display: block; margin-bottom: 10px; font-weight: 500; }
+        .control-group .slider-value { font-weight: 700; color: var(--primary-color); }
+
+        input[type="range"] {
+            width: 100%; -webkit-appearance: none; appearance: none;
+            height: 8px; background: #e9ecef; border-radius: 5px; outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none;
+            width: 20px; height: 20px; background: var(--primary-color);
+            cursor: pointer; border-radius: 50%;
+        }
+        #capital-inicial::-webkit-slider-thumb { background: var(--success-color); }
+        #capital-inicial-value { color: var(--success-color); }
+        #recuperacao-divida::-webkit-slider-thumb { background: var(--warning-color); }
+        #recuperacao-divida-value { color: var(--warning-color); }
+        #juros-contrato::-webkit-slider-thumb { background: var(--info-color); }
+        #juros-contrato-value { color: var(--info-color); }
+
+        .results-table td:last-child { text-align: right; font-weight: 500; }
+        .table-header { font-size: 1.1em; font-weight: 700; background-color: #f8f9fa; color: var(--primary-color); }
+        .table-total { font-weight: 700; background-color: #f8f9fa; }
+        .profit .value, .recovery .value { color: var(--success-color); }
+        .loss .value { color: var(--danger-color); }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h1>Dashboard</h1>
+            <p>Análise Financeira</p>
+        </div>
+
+        <div class="kpi-grid">
+            <div class="kpi-card profit"><div class="label">Lucro Líquido Anual</div><div class="value positive" id="kpi-lucro"></div></div>
+            <div class="kpi-card profit"><div class="label">Retorno s/ Capital (ROI)</div><div class="value positive" id="kpi-roi"></div></div>
+            <div class="kpi-card info"><div class="label">Faturamento Bruto Total</div><div class="value neutral" id="kpi-faturamento"></div></div>
+            <div class="kpi-card loss"><div class="label">Perda LÍQUIDA c/ Inadimplência</div><div class="value negative" id="kpi-perda"></div></div>
+        </div>
+
+        <div class="section">
+            <h2>Parâmetros da Simulação</h2>
+            <div class="controls-grid">
+                <div class="control-group"><label>Capital Inicial de Investimento: <span class="slider-value" id="capital-inicial-value"></span></label><input type="range" id="capital-inicial" min="50000" max="1000000" value="200000" step="10000"></div>
+                <div class="control-group"><label>Juros de Faturamento (Jan-Jul): <span class="slider-value" id="juros-faturamento1-value"></span></label><input type="range" id="juros-faturamento1" min="2" max="10" value="4" step="0.1"></div>
+                <div class="control-group"><label>Juros de Faturamento (Ago-Dez): <span class="slider-value" id="juros-faturamento2-value"></span></label><input type="range" id="juros-faturamento2" min="2" max="12" value="6" step="0.1"></div>
+                <div class="control-group"><label>Juros Médio do Contrato (12m): <span class="slider-value" id="juros-contrato-value"></span></label><input type="range" id="juros-contrato" min="3" max="10" value="5" step="0.1"></div>
+                <div class="control-group"><label>Inadimplência Projetada: <span class="slider-value" id="inadimplencia-value"></span></label><input type="range" id="inadimplencia" min="0" max="30" value="15" step="0.5"></div>
+                <div class="control-group"><label>Recuperação via Venda de Dívida: <span class="slider-value" id="recuperacao-divida-value"></span></label><input type="range" id="recuperacao-divida" min="0" max="50" value="30" step="1"></div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>Simulação</h2>
+            <div class="portfolio-grid">
+                <div class="portfolio-card"><h3>Grupo A (<span id="clientes-a"></span> clientes)</h3>
+                    <ul>
+                        <li><span>Capital Emprestado (Principal)</span> <span id="grupo-a-principal"></span></li>
+                        <li><span>(+) Juros Totais Gerados (12m)</span> <span id="grupo-a-juros"></span></li>
+                        <li style="font-weight: bold;"><span>(=) Valor Total da Dívida</span> <span id="grupo-a-divida"></span></li>
+                    </ul>
+                </div>
+                <div class="portfolio-card"><h3>Grupo B (<span id="clientes-b"></span> clientes)</h3>
+                     <ul>
+                        <li><span>Capital Emprestado (Principal)</span> <span id="grupo-b-principal"></span></li>
+                        <li><span>(+) Juros Totais Gerados (12m)</span> <span id="grupo-b-juros"></span></li>
+                        <li style="font-weight: bold;"><span>(=) Valor Total da Dívida</span> <span id="grupo-b-divida"></span></li>
+                    </ul>
+                </div>
+                <div class="portfolio-card total-card"><h3>Totais da Carteira (<span id="clientes-total"></span> clientes)</h3>
+                     <ul>
+                        <li><span>Capital Emprestado (Principal)</span> <span id="total-principal"></span></li>
+                        <li><span>(+) Juros Totais Gerados (12m)</span> <span id="total-juros"></span></li>
+                        <li style="font-weight: bold;"><span>(=) Valor Total da Dívida</span> <span id="total-divida"></span></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Detalhamento da Projeção Financeira Anual</h2>
+            <table class="results-table" style="width:100%; border-collapse: collapse;">
+                <tr class="table-header"><td colspan="3">(+) Receitas</td></tr>
+                <tr><td>Receita de Juros (Faturamento)</td><td id="detalhe-receita-juros"></td><td class="value" id="valor-receita-juros"></td></tr>
+                <tr><td>Receita com Seguro (5%)</td><td id="detalhe-seguro"></td><td class="value" id="valor-seguro"></td></tr>
+                <tr><td>Receita com Taxa PIX</td><td id="detalhe-pix-receita"></td><td class="value" id="valor-pix-receita"></td></tr>
+                <tr class="table-total"><td><strong>Faturamento Bruto Total</strong></td><td></td><td class="value" id="valor-receita-total"></td></tr>
+                <tr class="table-header"><td colspan="3">(-) Custos e Perdas</td></tr>
+                <tr class="loss"><td>Perda Bruta com Inadimplência</td><td id="detalhe-perda-bruta"></td><td class="value" id="valor-perda-bruta"></td></tr>
+                <tr class="recovery"><td>(-) Recuperação via Venda de Dívida</td><td id="detalhe-recuperacao"></td><td class="value" id="valor-recuperacao"></td></tr>
+                <tr class="table-total loss"><td><strong>Perda Líquida com Inadimplência</strong></td><td></td><td class="value" id="valor-perda-liquida"></td></tr>
+                <tr><td>Tributação (Lucro Presumido)</td><td id="detalhe-impostos"></td><td class="value" id="valor-impostos"></td></tr>
+                <tr><td>Custos Operacionais Fixos</td><td id="detalhe-custos"></td><td class="value" id="valor-custos"></td></tr>
+                <tr><td>Custo Real das Transações PIX</td><td id="detalhe-pix-custo"></td><td class="value" id="valor-pix-custo"></td></tr>
+                <tr class="table-total loss"><td><strong>Custo Total</strong></td><td></td><td class="value" id="valor-custo-total"></td></tr>
+                <tr class="table-total profit"><td colspan="3" style="height:20px;"></td></tr>
+                <tr class="table-total profit"><td><strong>(=) Lucro Líquido Anual</strong></td><td>Faturamento Bruto - Custo Total</td><td class="value" id="valor-lucro-final" style="font-size: 1.4em;"></td></tr>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const capitalInicialSlider = document.getElementById('capital-inicial');
+        const jurosFaturamento1Slider = document.getElementById('juros-faturamento1');
+        const jurosFaturamento2Slider = document.getElementById('juros-faturamento2');
+        const jurosContratoSlider = document.getElementById('juros-contrato');
+        const inadimplenciaSlider = document.getElementById('inadimplencia');
+        const recuperacaoSlider = document.getElementById('recuperacao-divida');
+        
+        const percSeguro = 0.05;
+        const taxaPixCobrada = 10.00;
+        const custoPixReal = 2.00;
+        const percImpostos = 0.1425;
+        const percCustosOp = 0.04;
+
+        function formatCurrency(value) {
+            return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        }
+
+        function updateDashboard() {
+            const capitalInicial = parseFloat(capitalInicialSlider.value);
+            const taxaJurosFaturamento1 = parseFloat(jurosFaturamento1Slider.value) / 100;
+            const taxaJurosFaturamento2 = parseFloat(jurosFaturamento2Slider.value) / 100;
+            const taxaJurosContrato = parseFloat(jurosContratoSlider.value) / 100;
+            const taxaInadimplencia = parseFloat(inadimplenciaSlider.value) / 100;
+            const taxaRecuperacao = parseFloat(recuperacaoSlider.value) / 100;
+
+            document.getElementById('capital-inicial-value').textContent = formatCurrency(capitalInicial);
+            document.getElementById('juros-faturamento1-value').textContent = `${(taxaJurosFaturamento1 * 100).toFixed(1)}%`;
+            document.getElementById('juros-faturamento2-value').textContent = `${(taxaJurosFaturamento2 * 100).toFixed(1)}%`;
+            document.getElementById('juros-contrato-value').textContent = `${(taxaJurosContrato * 100).toFixed(1)}%`;
+            document.getElementById('inadimplencia-value').textContent = `${(taxaInadimplencia * 100).toFixed(1)}%`;
+            document.getElementById('recuperacao-divida-value').textContent = `${(taxaRecuperacao * 100).toFixed(0)}%`;
+
+            const propocaoCapitalA = 0.25; // 50k de 200k
+            const propocaoCapitalB = 0.75; // 150k de 200k
+            const valorEmprestimoA = 1000;
+            const valorEmprestimoB = 2000;
+
+            const principalGrupoA = capitalInicial * propocaoCapitalA;
+            const numClientesA = principalGrupoA / valorEmprestimoA;
+            const principalGrupoB = capitalInicial * propocaoCapitalB;
+            const numClientesB = principalGrupoB / valorEmprestimoB;
+            const totalClientes = numClientesA + numClientesB;
+            
+            const jurosGeradosGrupoA = principalGrupoA * taxaJurosContrato * 12;
+            const dividaTotalGrupoA = principalGrupoA + jurosGeradosGrupoA;
+            const jurosGeradosGrupoB = principalGrupoB * taxaJurosContrato * 12;
+            const dividaTotalGrupoB = principalGrupoB + jurosGeradosGrupoB;
+            const totalJurosGerados = jurosGeradosGrupoA + jurosGeradosGrupoB;
+            const totalDividaPortfolio = dividaTotalGrupoA + dividaTotalGrupoB;
+
+            document.getElementById('clientes-a').textContent = numClientesA.toFixed(0);
+            document.getElementById('grupo-a-principal').textContent = formatCurrency(principalGrupoA);
+            document.getElementById('grupo-a-juros').textContent = formatCurrency(jurosGeradosGrupoA);
+            document.getElementById('grupo-a-divida').textContent = formatCurrency(dividaTotalGrupoA);
+            document.getElementById('clientes-b').textContent = numClientesB.toFixed(0);
+            document.getElementById('grupo-b-principal').textContent = formatCurrency(principalGrupoB);
+            document.getElementById('grupo-b-juros').textContent = formatCurrency(jurosGeradosGrupoB);
+            document.getElementById('grupo-b-divida').textContent = formatCurrency(dividaTotalGrupoB);
+            document.getElementById('clientes-total').textContent = totalClientes.toFixed(0);
+            document.getElementById('total-principal').textContent = formatCurrency(capitalInicial);
+            document.getElementById('total-juros').textContent = formatCurrency(totalJurosGerados);
+            document.getElementById('total-divida').textContent = formatCurrency(totalDividaPortfolio);
+
+            const receitaJurosFaturamento = (capitalInicial * taxaJurosFaturamento1 * 7) + (capitalInicial * taxaJurosFaturamento2 * 5);
+            const receitaSeguro = totalDividaPortfolio * percSeguro;
+            const receitaPix = totalClientes * taxaPixCobrada;
+            const faturamentoBrutoTotal = receitaJurosFaturamento + receitaSeguro + receitaPix;
+
+            const perdaBrutaInadimplencia = capitalInicial * taxaInadimplencia;
+            const valorRecuperado = perdaBrutaInadimplencia * taxaRecuperacao;
+            const perdaLiquidaInadimplencia = perdaBrutaInadimplencia - valorRecuperado;
+            const impostos = faturamentoBrutoTotal * percImpostos;
+            const custosOperacionais = capitalInicial * percCustosOp;
+            const custoPix = totalClientes * custoPixReal;
+            const custoTotal = perdaLiquidaInadimplencia + impostos + custosOperacionais + custoPix;
+            
+            const lucroLiquidoAnual = faturamentoBrutoTotal - custoTotal;
+            const roi = capitalInicial > 0 ? (lucroLiquidoAnual / capitalInicial) * 100 : 0;
+
+            document.getElementById('kpi-lucro').textContent = formatCurrency(lucroLiquidoAnual);
+            document.getElementById('kpi-roi').textContent = `${roi.toFixed(2)}%`;
+            document.getElementById('kpi-faturamento').textContent = formatCurrency(faturamentoBrutoTotal);
+            document.getElementById('kpi-perda').textContent = formatCurrency(perdaLiquidaInadimplencia);
+            
+            document.getElementById('detalhe-receita-juros').textContent = `7m a ${(taxaJurosFaturamento1*100).toFixed(1)}% + 5m a ${(taxaJurosFaturamento2*100).toFixed(1)}%`;
+            document.getElementById('valor-receita-juros').textContent = formatCurrency(receitaJurosFaturamento);
+            document.getElementById('detalhe-seguro').textContent = `5% sobre ${formatCurrency(totalDividaPortfolio)}`;
+            document.getElementById('valor-seguro').textContent = formatCurrency(receitaSeguro);
+            document.getElementById('detalhe-pix-receita').textContent = `${totalClientes.toFixed(0)} clientes x ${formatCurrency(taxaPixCobrada)}`;
+            document.getElementById('valor-pix-receita').textContent = formatCurrency(receitaPix);
+            document.getElementById('valor-receita-total').textContent = formatCurrency(faturamentoBrutoTotal);
+            document.getElementById('detalhe-perda-bruta').textContent = `${(taxaInadimplencia*100).toFixed(1)}% sobre o capital`;
+            document.getElementById('valor-perda-bruta').textContent = `(${formatCurrency(perdaBrutaInadimplencia)})`;
+            document.getElementById('detalhe-recuperacao').textContent = `${(taxaRecuperacao*100).toFixed(0)}% de ${formatCurrency(perdaBrutaInadimplencia)}`;
+            document.getElementById('valor-recuperacao').textContent = formatCurrency(valorRecuperado);
+            document.getElementById('valor-perda-liquida').textContent = `(${formatCurrency(perdaLiquidaInadimplencia)})`;
+            document.getElementById('detalhe-impostos').textContent = `${(percImpostos*100).toFixed(2)}% sobre o faturamento`;
+            document.getElementById('valor-impostos').textContent = `(${formatCurrency(impostos)})`;
+            document.getElementById('detalhe-custos').textContent = `${(percCustosOp*100)}% sobre o capital`;
+            document.getElementById('valor-custos').textContent = `(${formatCurrency(custosOperacionais)})`;
+            document.getElementById('detalhe-pix-custo').textContent = `${totalClientes.toFixed(0)} clientes x ${formatCurrency(custoPixReal)}`;
+            document.getElementById('valor-pix-custo').textContent = `(${formatCurrency(custoPix)})`;
+            document.getElementById('valor-custo-total').textContent = `(${formatCurrency(custoTotal)})`;
+            document.getElementById('valor-lucro-final').textContent = formatCurrency(lucroLiquidoAnual);
+        }
+
+        [capitalInicialSlider, jurosFaturamento1Slider, jurosFaturamento2Slider, jurosContratoSlider, inadimplenciaSlider, recuperacaoSlider].forEach(slider => {
+            slider.addEventListener('input', updateDashboard);
+        });
+
+        window.onload = updateDashboard;
+    </script>
+
+</body>
+</html>
